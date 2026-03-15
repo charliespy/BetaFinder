@@ -12,14 +12,38 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { setImage } from '@/lib/imageStore'
+import { ROUTE_COLORS } from '@/types/beta'
 
-const ROUTE_COLORS = [
-  'red', 'blue', 'green', 'yellow', 'orange',
-  'pink', 'purple', 'white', 'black', 'grey',
-] as const
+function drawGridOverlay(canvas: HTMLCanvasElement): void {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
+  ctx.lineWidth = 1
+  ctx.font = `${Math.max(12, Math.round(canvas.width / 80))}px sans-serif`
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
+
+  for (let pct = 10; pct <= 90; pct += 10) {
+    const x = (pct / 100) * canvas.width
+    const y = (pct / 100) * canvas.height
+
+    ctx.beginPath()
+    ctx.moveTo(x, 0)
+    ctx.lineTo(x, canvas.height)
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.moveTo(0, y)
+    ctx.lineTo(canvas.width, y)
+    ctx.stroke()
+
+    ctx.fillText(`${pct}%`, x + 2, 14)
+    ctx.fillText(`${pct}%`, 2, y - 2)
+  }
+}
 
 function resizeImage(base64: string, maxSize: number): Promise<{ base64: string; width: number; height: number }> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
       let { width, height } = img
@@ -31,8 +55,13 @@ function resizeImage(base64: string, maxSize: number): Promise<{ base64: string;
       const canvas = document.createElement('canvas')
       canvas.width = width
       canvas.height = height
-      const ctx = canvas.getContext('2d')!
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Failed to get canvas context'))
+        return
+      }
       ctx.drawImage(img, 0, 0, width, height)
+      drawGridOverlay(canvas)
       const resized = canvas.toDataURL('image/jpeg', 0.9)
       const b64 = resized.split(',')[1]
       resolve({ base64: b64, width, height })

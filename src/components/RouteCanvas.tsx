@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect, useCallback, memo } from 'react'
+import { useRef, useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { Stage, Layer, Image as KonvaImage, Circle, Group, Line, Text } from 'react-konva'
 import type Konva from 'konva'
 import type { Hold, InteractionMode } from '@/types/beta'
@@ -22,9 +22,11 @@ const LABEL_RING: Record<string, string> = {
   top: '#f43f5e',
 }
 
-const SELECTION_DASH = [4, 4]
-const DELETE_X_POINTS_A = [-3, -3, 3, 3]
-const DELETE_X_POINTS_B = [-3, 3, 3, -3]
+// Konva dash pattern for selected hold ring
+const SELECTION_DASH_PATTERN = [4, 4]
+// Two diagonal lines forming an X for the delete button
+const DELETE_X_LINE_1 = [-3, -3, 3, 3]
+const DELETE_X_LINE_2 = [-3, 3, 3, -3]
 
 interface RouteCanvasProps {
   imageBase64: string
@@ -99,7 +101,7 @@ export default memo(function RouteCanvas({
     })
   }
 
-  const holdRadius = Math.max(12, 18 * scale)
+  const holdRadius = useMemo(() => Math.max(12, 18 * scale), [scale])
 
   return (
     <div ref={containerRef} className="w-full">
@@ -155,7 +157,7 @@ export default memo(function RouteCanvas({
                       radius={holdRadius + 8}
                       stroke="#ffffff"
                       strokeWidth={2}
-                      dash={SELECTION_DASH}
+                      dash={SELECTION_DASH_PATTERN}
                     />
                   ) : null}
                   {/* Hold circle */}
@@ -192,12 +194,12 @@ export default memo(function RouteCanvas({
                     >
                       <Circle radius={8} fill="#ef4444" />
                       <Line
-                        points={DELETE_X_POINTS_A}
+                        points={DELETE_X_LINE_1}
                         stroke="#ffffff"
                         strokeWidth={1.5}
                       />
                       <Line
-                        points={DELETE_X_POINTS_B}
+                        points={DELETE_X_LINE_2}
                         stroke="#ffffff"
                         strokeWidth={1.5}
                       />

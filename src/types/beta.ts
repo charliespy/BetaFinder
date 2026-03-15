@@ -44,3 +44,31 @@ export type AnalysisAction =
   | { type: 'UPDATE_HOLD'; payload: Partial<Hold> & { id: string } }
   | { type: 'SELECT_HOLD'; payload: string | null }
   | { type: 'SET_MODE'; payload: InteractionMode }
+
+export const ROUTE_COLORS = [
+  'red', 'blue', 'green', 'yellow', 'orange',
+  'pink', 'purple', 'white', 'black', 'grey',
+] as const
+
+export type RouteColor = (typeof ROUTE_COLORS)[number]
+
+export const MAX_IMAGE_PAYLOAD_BYTES = 10 * 1024 * 1024 // 10MB
+
+export const HOLD_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    id: { type: 'string' as const },
+    x: { type: 'number' as const },
+    y: { type: 'number' as const },
+    type: {
+      type: 'string' as const,
+      enum: ['jug', 'crimp', 'sloper', 'pinch', 'pocket', 'volume'],
+    },
+    label: {
+      type: ['string', 'null'] as const,
+      enum: ['start-left', 'start-right', 'top', null],
+    },
+  },
+  required: ['id', 'x', 'y', 'type', 'label'] as const,
+  additionalProperties: false as const,
+}

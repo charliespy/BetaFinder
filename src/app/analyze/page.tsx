@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useReducer, useCallback, useState, useMemo, Suspense } from 'react'
+import { Component, useEffect, useReducer, useCallback, useState, useMemo, Suspense } from 'react'
+import type { ReactNode, ErrorInfo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Loader2, RotateCw } from 'lucide-react'
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import HoldToolbar from '@/components/HoldToolbar'
+import { ROUTE_COLORS } from '@/types/beta'
 import type {
   AnalysisState,
   AnalysisAction,
@@ -25,10 +27,37 @@ const RouteCanvas = dynamic(() => import('@/components/RouteCanvas'), {
   ssr: false,
 })
 
-const ROUTE_COLORS = [
-  'red', 'blue', 'green', 'yellow', 'orange',
-  'pink', 'purple', 'white', 'black', 'grey',
-] as const
+class CanvasErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: string | null }
+> {
+  state = { error: null as string | null }
+
+  static getDerivedStateFromError(err: Error) {
+    return { error: err.message }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Canvas error:', error, info)
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 py-16 rounded-xl border bg-black text-white">
+          <p className="text-sm">Failed to render canvas: {this.state.error}</p>
+          <button
+            className="text-sm underline"
+            onClick={() => this.setState({ error: null })}
+          >
+            Try again
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const initialState: AnalysisState = {
   imageBase64: null,
@@ -112,6 +141,8 @@ function AnalyzeContent() {
     [width, height]
   )
 
+  // Run analysis on mount. Deps are intentionally limited to router/searchParams
+  // because runAnalysis, width, height, and holdColor are derived from searchParams.
   useEffect(() => {
     const image = getImage()
     if (!image) {
@@ -211,7 +242,7 @@ function AnalyzeContent() {
           <div className="flex flex-col items-center justify-center gap-3 py-32">
             <Loader2 className="size-8 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Detecting holds &amp; verifying coverage...
+              Detecting holds...
             </p>
           </div>
         ) : state.status === 'error' ? (
@@ -233,18 +264,20 @@ function AnalyzeContent() {
               onUpdateHold={handleUpdateHold}
               onDeleteHold={handleRemoveHold}
             />
-            <div className="overflow-hidden rounded-xl border bg-black">
-              <RouteCanvas
-                imageBase64={state.imageBase64}
-                holds={state.holds}
-                selectedHoldId={state.selectedHoldId}
-                mode={state.mode}
-                onAddHold={handleAddHold}
-                onRemoveHold={handleRemoveHold}
-                onUpdateHold={handleUpdateHold}
-                onSelectHold={handleSelectHold}
-              />
-            </div>
+            <CanvasErrorBoundary>
+              <div className="overflow-hidden rounded-xl border bg-black">
+                <RouteCanvas
+                  imageBase64={state.imageBase64}
+                  holds={state.holds}
+                  selectedHoldId={state.selectedHoldId}
+                  mode={state.mode}
+                  onAddHold={handleAddHold}
+                  onRemoveHold={handleRemoveHold}
+                  onUpdateHold={handleUpdateHold}
+                  onSelectHold={handleSelectHold}
+                />
+              </div>
+            </CanvasErrorBoundary>
             <p className="text-xs text-muted-foreground text-center">
               {state.holds.length} hold{state.holds.length !== 1 ? 's' : ''} detected
             </p>

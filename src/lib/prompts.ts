@@ -53,31 +53,3 @@ Follow this process:
 3. Most climbing routes have 6–15 holds. Make sure you have found ALL holds of this color before finalizing.
 4. Return your final answer as JSON.`
 }
-
-export function buildVerificationPrompt(
-  width: number,
-  height: number,
-  holdColor: string,
-  existingHolds: { id: string; x: number; y: number }[]
-): string {
-  const holdList = existingHolds
-    .map((h) => `  ${h.id}: (${h.x.toFixed(1)}%, ${h.y.toFixed(1)}%)`)
-    .join('\n')
-
-  return `Image dimensions: ${width}x${height} pixels. The image has a percentage grid overlay for reference.
-
-You previously detected ${existingHolds.length} ${holdColor.toUpperCase()} holds at these locations (in percentage coordinates):
-${holdList}
-
-Look at the image again carefully. Are there any ${holdColor.toUpperCase()} holds you missed? Focus especially on:
-- Areas of the image far from existing detections
-- Holds that might be partially hidden or at the edges
-- Small holds that are easy to overlook
-
-Return ONLY newly found holds that are NOT duplicates of the ones listed above. If you found no new holds, return an empty holds array.
-
-Reminders:
-- Only include holds on the PRIMARY wall, not adjacent/background walls.
-- Only include actual climbing holds, not tape, tags, or route markers.
-- Place coordinates at the exact center of each hold. Use the grid overlay for reference.`
-}
