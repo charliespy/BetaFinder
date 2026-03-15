@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2, RotateCw } from 'lucide-react'
 import { getImage } from '@/lib/imageStore'
 import { applyGridOverlay } from '@/lib/gridOverlay'
+import { extractHoldContours } from '@/lib/holdSegmentation'
 import { Button } from '@/components/ui/button'
 import ColorPicker from '@/components/ColorPicker'
 import HoldToolbar from '@/components/HoldToolbar'
@@ -101,6 +102,15 @@ function reducer(state: AnalysisState, action: AnalysisAction): AnalysisState {
       return { ...state, selectedHoldId: action.payload }
     case 'SET_MODE':
       return { ...state, mode: action.payload, selectedHoldId: null }
+    case 'SET_CONTOURS':
+      return {
+        ...state,
+        holds: state.holds.map((h) => {
+          const match = action.payload.find((c) => c.id === h.id)
+          if (!match) return h
+          return { ...h, contour: match.contour, x: match.correctedX, y: match.correctedY }
+        }),
+      }
     default:
       return state
   }
@@ -130,7 +140,13 @@ function AnalyzeContent() {
           if (!res.ok) throw new Error(data.error || 'Analysis failed')
           return data
         })
-        .then((result) => dispatch({ type: 'ANALYZE_SUCCESS', payload: result }))
+        .then((result) => {
+          dispatch({ type: 'ANALYZE_SUCCESS', payload: result })
+          // Run client-side segmentation on the original (non-grid) image
+          extractHoldContours(image, result.holds).then((contours) =>
+            dispatch({ type: 'SET_CONTOURS', payload: contours })
+          )
+        })
         .catch((err) =>
           dispatch({ type: 'ANALYZE_ERROR', payload: err.message })
         )
@@ -173,7 +189,13 @@ function AnalyzeContent() {
       label: null,
     }
     dispatch({ type: 'ADD_HOLD', payload: hold })
-  }, [])
+    // Run segmentation for the newly added hold
+    if (state.imageBase64) {
+      extractHoldContours(state.imageBase64, [hold]).then((contours) =>
+        dispatch({ type: 'SET_CONTOURS', payload: contours })
+      )
+    }
+  }, [state.imageBase64])
 
   const handleRemoveHold = useCallback((id: string) => {
     dispatch({ type: 'REMOVE_HOLD', payload: id })

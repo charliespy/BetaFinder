@@ -16,14 +16,15 @@ export function applyGridOverlay(base64: string): Promise<string> {
       }
       ctx.drawImage(img, 0, 0)
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
       ctx.lineWidth = 1
       ctx.font = `${Math.max(12, Math.round(canvas.width / 80))}px sans-serif`
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
 
-      for (let pct = 10; pct <= 90; pct += 10) {
+      for (let pct = 5; pct <= 95; pct += 5) {
         const x = (pct / 100) * canvas.width
         const y = (pct / 100) * canvas.height
+
+        ctx.strokeStyle = pct % 10 === 0 ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.25)'
 
         ctx.beginPath()
         ctx.moveTo(x, 0)
@@ -35,8 +36,10 @@ export function applyGridOverlay(base64: string): Promise<string> {
         ctx.lineTo(canvas.width, y)
         ctx.stroke()
 
-        ctx.fillText(`${pct}%`, x + 2, 14)
-        ctx.fillText(`${pct}%`, 2, y - 2)
+        if (pct % 10 === 0) {
+          ctx.fillText(`${pct}%`, x + 2, 14)
+          ctx.fillText(`${pct}%`, 2, y - 2)
+        }
       }
 
       const result = canvas.toDataURL('image/jpeg', 0.9)

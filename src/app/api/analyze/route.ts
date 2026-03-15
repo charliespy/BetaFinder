@@ -12,6 +12,7 @@ interface DetectionResponse {
     y: number
     type: Hold['type']
     label: Hold['label']
+    hexColor: string
   }[]
   route: AnalysisResult['route']
 }

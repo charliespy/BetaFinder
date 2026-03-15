@@ -128,6 +128,20 @@ export default memo(function RouteCanvas({
               const labelColor = hold.label ? LABEL_RING[hold.label] : null
               const typeLabel = HOLD_TYPE_SHORT[hold.type] || hold.type.toUpperCase()
               const fontSize = Math.max(9, 11 * scale)
+              const hasContour = hold.contour && hold.contour.length >= 3
+
+              // Compute effective radius from contour bounding extent (for rings/labels/delete button)
+              let effectiveRadius = holdRadius
+              if (hasContour) {
+                let maxDist = 0
+                for (const p of hold.contour!) {
+                  const dx = (p.x - hold.x) * scale
+                  const dy = (p.y - hold.y) * scale
+                  const d = Math.sqrt(dx * dx + dy * dy)
+                  if (d > maxDist) maxDist = d
+                }
+                effectiveRadius = Math.max(holdRadius, maxDist)
+              }
 
               return (
                 <Group
@@ -146,7 +160,7 @@ export default memo(function RouteCanvas({
                   {/* Label ring */}
                   {labelColor ? (
                     <Circle
-                      radius={holdRadius + 4}
+                      radius={effectiveRadius + 4}
                       stroke={labelColor}
                       strokeWidth={3}
                     />
@@ -154,24 +168,38 @@ export default memo(function RouteCanvas({
                   {/* Selection ring */}
                   {isSelected ? (
                     <Circle
-                      radius={holdRadius + 8}
+                      radius={effectiveRadius + 8}
                       stroke="#ffffff"
                       strokeWidth={2}
                       dash={SELECTION_DASH_PATTERN}
                     />
                   ) : null}
-                  {/* Hold circle */}
-                  <Circle
-                    radius={holdRadius}
-                    fill={HOLD_COLOR}
-                    opacity={0.7}
-                    stroke={isSelected ? '#ffffff' : 'rgba(0,0,0,0.5)'}
-                    strokeWidth={isSelected ? 2 : 1}
-                  />
+                  {/* Hold shape: polygon if contour exists, circle otherwise */}
+                  {hasContour ? (
+                    <Line
+                      points={hold.contour!.flatMap((p) => [
+                        (p.x - hold.x) * scale,
+                        (p.y - hold.y) * scale,
+                      ])}
+                      closed
+                      fill={HOLD_COLOR}
+                      opacity={0.55}
+                      stroke={isSelected ? '#ffffff' : 'rgba(0,0,0,0.5)'}
+                      strokeWidth={isSelected ? 2 : 1}
+                    />
+                  ) : (
+                    <Circle
+                      radius={holdRadius}
+                      fill={HOLD_COLOR}
+                      opacity={0.7}
+                      stroke={isSelected ? '#ffffff' : 'rgba(0,0,0,0.5)'}
+                      strokeWidth={isSelected ? 2 : 1}
+                    />
+                  )}
                   {/* Hold type label */}
                   <Text
                     text={typeLabel}
-                    x={holdRadius + 4}
+                    x={effectiveRadius + 4}
                     y={-fontSize / 2}
                     fontSize={fontSize}
                     fontStyle="bold"
@@ -189,8 +217,8 @@ export default memo(function RouteCanvas({
                         e.cancelBubble = true
                         onRemoveHold(hold.id)
                       }}
-                      x={holdRadius * 0.7}
-                      y={-holdRadius * 0.7}
+                      x={effectiveRadius * 0.7}
+                      y={-effectiveRadius * 0.7}
                     >
                       <Circle radius={8} fill="#ef4444" />
                       <Line

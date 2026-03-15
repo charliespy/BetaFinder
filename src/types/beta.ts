@@ -2,12 +2,19 @@ export type HoldType = 'jug' | 'crimp' | 'sloper' | 'pinch' | 'pocket' | 'volume
 
 export type HoldLabel = 'start-left' | 'start-right' | 'top' | null
 
+export interface Point2D {
+  x: number
+  y: number
+}
+
 export interface Hold {
   id: string
   x: number
   y: number
   type: HoldType
   label: HoldLabel
+  hexColor?: string
+  contour?: Point2D[]
 }
 
 export interface RouteInfo {
@@ -44,6 +51,7 @@ export type AnalysisAction =
   | { type: 'UPDATE_HOLD'; payload: Partial<Hold> & { id: string } }
   | { type: 'SELECT_HOLD'; payload: string | null }
   | { type: 'SET_MODE'; payload: InteractionMode }
+  | { type: 'SET_CONTOURS'; payload: { id: string; contour: Point2D[]; correctedX: number; correctedY: number }[] }
 
 export const ROUTE_COLORS = [
   'red', 'blue', 'green', 'yellow', 'orange',
@@ -70,7 +78,11 @@ export const HOLD_SCHEMA = {
       type: ['string', 'null'] as const,
       enum: ['start-left', 'start-right', 'top', null],
     },
+    hexColor: {
+      type: 'string' as const,
+      description: 'The observed hex color (e.g. "#7B3FA0") of the hold surface as seen in the image',
+    },
   },
-  required: ['id', 'x', 'y', 'type', 'label'] as const,
+  required: ['id', 'x', 'y', 'type', 'label', 'hexColor'] as const,
   additionalProperties: false as const,
 }
