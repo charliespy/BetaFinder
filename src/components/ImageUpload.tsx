@@ -4,15 +4,8 @@ import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, Image as ImageIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import ColorPicker from '@/components/ColorPicker'
 import { setImage } from '@/lib/imageStore'
-import { ROUTE_COLORS } from '@/types/beta'
 
 function resizeImage(base64: string, maxSize: number): Promise<{ base64: string; width: number; height: number }> {
   return new Promise((resolve, reject) => {
@@ -77,7 +70,7 @@ export default function ImageUpload() {
 
   const handleAnalyze = () => {
     if (!preview || !holdColor) return
-    router.push(`/analyze?w=${dimensions?.width}&h=${dimensions?.height}&color=${holdColor}`)
+    router.push(`/analyze?w=${dimensions?.width}&h=${dimensions?.height}&color=${encodeURIComponent(holdColor)}`)
   }
 
   return (
@@ -143,23 +136,7 @@ export default function ImageUpload() {
         <div className="flex flex-col items-center gap-4 w-full">
           <div className="flex items-center gap-3">
             <label className="text-sm text-muted-foreground">Route color:</label>
-            <Select value={holdColor} onValueChange={(v) => setHoldColor(v ?? '')}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Select color" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROUTE_COLORS.map((color) => (
-                  <SelectItem key={color} value={color}>
-                    <span
-                      className="inline-block size-3 rounded-full mr-1.5 border border-black/10"
-                      style={{ backgroundColor: color === 'white' ? '#f0f0f0' : color }}
-                      aria-hidden="true"
-                    />
-                    {color.charAt(0).toUpperCase() + color.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ColorPicker value={holdColor} onValueChange={setHoldColor} />
           </div>
           <div className="flex gap-3">
             <Button

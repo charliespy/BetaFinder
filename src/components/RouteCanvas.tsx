@@ -92,14 +92,14 @@ export default memo(function RouteCanvas({
     onAddHold(pos.x / scale, pos.y / scale)
   }, [mode, scale, onAddHold])
 
-  const handleDragEnd = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
+  const handleDragEnd = useCallback((id: string, e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
     onUpdateHold({
       id,
       x: node.x() / scale,
       y: node.y() / scale,
     })
-  }
+  }, [scale, onUpdateHold])
 
   const holdRadius = useMemo(() => Math.max(12, 18 * scale), [scale])
 

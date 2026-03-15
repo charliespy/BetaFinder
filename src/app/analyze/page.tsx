@@ -4,19 +4,13 @@ import { Component, useEffect, useReducer, useCallback, useState, useMemo, Suspe
 import type { ReactNode, ErrorInfo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { ArrowLeft, Loader2, RotateCw } from 'lucide-react'
 import { getImage } from '@/lib/imageStore'
 import { applyGridOverlay } from '@/lib/gridOverlay'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import ColorPicker from '@/components/ColorPicker'
 import HoldToolbar from '@/components/HoldToolbar'
-import { ROUTE_COLORS } from '@/types/beta'
 import type {
   AnalysisState,
   AnalysisAction,
@@ -132,8 +126,9 @@ function AnalyzeContent() {
         body: JSON.stringify({ imageBase64: gridImage, width, height, holdColor: color }),
       })
         .then(async (res) => {
-          if (!res.ok) throw new Error('Analysis failed')
-          return res.json()
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || 'Analysis failed')
+          return data
         })
         .then((result) => dispatch({ type: 'ANALYZE_SUCCESS', payload: result }))
         .catch((err) =>
@@ -143,8 +138,6 @@ function AnalyzeContent() {
     [width, height]
   )
 
-  // Run analysis on mount. Deps are intentionally limited to router/searchParams
-  // because runAnalysis, width, height, and holdColor are derived from searchParams.
   useEffect(() => {
     const image = getImage()
     if (!image) {
@@ -153,13 +146,17 @@ function AnalyzeContent() {
     }
     dispatch({ type: 'SET_IMAGE', payload: image })
 
-    if (!width || !height || !holdColor) {
+    const w = parseInt(searchParams.get('w') || '0', 10)
+    const h = parseInt(searchParams.get('h') || '0', 10)
+    const color = searchParams.get('color') || ''
+
+    if (!w || !h || !color) {
       dispatch({ type: 'ANALYZE_ERROR', payload: 'Missing image dimensions or hold color' })
       return
     }
 
-    runAnalysis(image, holdColor)
-  }, [router, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+    runAnalysis(image, color)
+  }, [router, searchParams, runAnalysis])
 
   const handleRerun = useCallback(() => {
     if (state.imageBase64 && holdColor) {
@@ -209,34 +206,19 @@ function AnalyzeContent() {
       <div className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <a
+            <Link
               href="/"
               className="inline-flex items-center justify-center size-8 rounded-md hover:bg-accent"
               aria-label="Back to upload"
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
-            </a>
+            </Link>
             <h1 className="text-xl font-semibold text-foreground text-balance">
               Hold Detection
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Select value={holdColor} onValueChange={(v) => setHoldColor(v ?? '')}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Select color" />
-              </SelectTrigger>
-              <SelectContent>
-                {ROUTE_COLORS.map((color) => (
-                  <SelectItem key={color} value={color}>
-                    <span
-                      className="inline-block size-3 rounded-full mr-1.5 border border-black/10"
-                      style={{ backgroundColor: color === 'white' ? '#f0f0f0' : color }}
-                    />
-                    {color.charAt(0).toUpperCase() + color.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ColorPicker value={holdColor} onValueChange={setHoldColor} />
             <Button
               variant="outline"
               size="sm"
@@ -259,12 +241,12 @@ function AnalyzeContent() {
         ) : state.status === 'error' ? (
           <div className="flex flex-col items-center justify-center gap-3 py-32">
             <p className="text-sm text-destructive">{state.error}</p>
-            <a
+            <Link
               href="/"
               className="text-sm underline text-muted-foreground"
             >
               Go back
-            </a>
+            </Link>
           </div>
         ) : state.status === 'success' ? (
           <div className="flex flex-col gap-4">

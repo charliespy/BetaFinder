@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import client from '@/lib/openai'
 import { HOLD_DETECTION_SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts'
-import type { AnalysisResult, Hold } from '@/types/beta'
-import { HOLD_SCHEMA, MAX_IMAGE_PAYLOAD_BYTES, MAX_BASE64_LENGTH } from '@/types/beta'
+import type { AnalysisResult, Hold, RouteColor } from '@/types/beta'
+import { HOLD_SCHEMA, MAX_IMAGE_PAYLOAD_BYTES, MAX_BASE64_LENGTH, ROUTE_COLORS } from '@/types/beta'
 
 interface DetectionResponse {
   reasoning?: string
@@ -43,6 +43,20 @@ export async function POST(request: Request) {
     if (!imageBase64 || !width || !height || !holdColor) {
       return NextResponse.json(
         { error: 'Missing required fields: imageBase64, width, height, holdColor' },
+        { status: 400 }
+      )
+    }
+
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+      return NextResponse.json(
+        { error: 'width and height must be positive integers' },
+        { status: 400 }
+      )
+    }
+
+    if (!ROUTE_COLORS.includes(holdColor as RouteColor)) {
+      return NextResponse.json(
+        { error: 'Invalid hold color' },
         { status: 400 }
       )
     }
