@@ -53,6 +53,8 @@ export const ROUTE_COLORS = [
 export type RouteColor = (typeof ROUTE_COLORS)[number]
 
 export const MAX_IMAGE_PAYLOAD_BYTES = 10 * 1024 * 1024 // 10MB
+// Base64 encoding expands size by ~4/3; this is the max base64 string length for 10MB
+export const MAX_BASE64_LENGTH = Math.ceil(MAX_IMAGE_PAYLOAD_BYTES * 4 / 3)
 
 export const HOLD_SCHEMA = {
   type: 'object' as const,

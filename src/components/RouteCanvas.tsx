@@ -80,7 +80,7 @@ export default memo(function RouteCanvas({
     return () => observer.disconnect()
   }, [updateSize])
 
-  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleStageClick = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
     // Only add holds when clicking the background in add mode
     if (mode !== 'add') return
     const target = e.target
@@ -90,7 +90,7 @@ export default memo(function RouteCanvas({
     const pos = stage?.getPointerPosition()
     if (!pos) return
     onAddHold(pos.x / scale, pos.y / scale)
-  }
+  }, [mode, scale, onAddHold])
 
   const handleDragEnd = (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target

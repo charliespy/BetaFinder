@@ -14,34 +14,6 @@ import {
 import { setImage } from '@/lib/imageStore'
 import { ROUTE_COLORS } from '@/types/beta'
 
-function drawGridOverlay(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return
-
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'
-  ctx.lineWidth = 1
-  ctx.font = `${Math.max(12, Math.round(canvas.width / 80))}px sans-serif`
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'
-
-  for (let pct = 10; pct <= 90; pct += 10) {
-    const x = (pct / 100) * canvas.width
-    const y = (pct / 100) * canvas.height
-
-    ctx.beginPath()
-    ctx.moveTo(x, 0)
-    ctx.lineTo(x, canvas.height)
-    ctx.stroke()
-
-    ctx.beginPath()
-    ctx.moveTo(0, y)
-    ctx.lineTo(canvas.width, y)
-    ctx.stroke()
-
-    ctx.fillText(`${pct}%`, x + 2, 14)
-    ctx.fillText(`${pct}%`, 2, y - 2)
-  }
-}
-
 function resizeImage(base64: string, maxSize: number): Promise<{ base64: string; width: number; height: number }> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -61,11 +33,11 @@ function resizeImage(base64: string, maxSize: number): Promise<{ base64: string;
         return
       }
       ctx.drawImage(img, 0, 0, width, height)
-      drawGridOverlay(canvas)
       const resized = canvas.toDataURL('image/jpeg', 0.9)
       const b64 = resized.split(',')[1]
       resolve({ base64: b64, width, height })
     }
+    img.onerror = () => reject(new Error('Failed to load image'))
     img.src = base64
   })
 }
@@ -75,16 +47,21 @@ export default function ImageUpload() {
   const [dragOver, setDragOver] = useState(false)
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
   const [holdColor, setHoldColor] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) return
+    setError(null)
     const reader = new FileReader()
     reader.onload = async (e) => {
       const dataUrl = e.target?.result as string
       const { base64, width, height } = await resizeImage(dataUrl, 2048)
-      setImage(base64)
+      if (!setImage(base64)) {
+        setError('Image too large to store. Try a smaller photo.')
+        return
+      }
       setPreview(`data:image/jpeg;base64,${base64}`)
       setDimensions({ width, height })
     }
@@ -107,6 +84,7 @@ export default function ImageUpload() {
     <div className="flex flex-col items-center gap-6 w-full max-w-lg">
       <button
         type="button"
+        aria-label="Upload climbing wall photo"
         onClick={() => inputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -156,6 +134,10 @@ export default function ImageUpload() {
           }}
         />
       </button>
+
+      {error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : null}
 
       {preview ? (
         <div className="flex flex-col items-center gap-4 w-full">

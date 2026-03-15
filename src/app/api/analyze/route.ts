@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import client from '@/lib/openai'
 import { HOLD_DETECTION_SYSTEM_PROMPT, buildUserPrompt } from '@/lib/prompts'
 import type { AnalysisResult, Hold } from '@/types/beta'
-import { HOLD_SCHEMA, MAX_IMAGE_PAYLOAD_BYTES } from '@/types/beta'
+import { HOLD_SCHEMA, MAX_IMAGE_PAYLOAD_BYTES, MAX_BASE64_LENGTH } from '@/types/beta'
 
 interface DetectionResponse {
   reasoning?: string
@@ -47,62 +47,70 @@ export async function POST(request: Request) {
       )
     }
 
-    if (typeof imageBase64 !== 'string' || imageBase64.length > MAX_IMAGE_PAYLOAD_BYTES) {
+    if (typeof imageBase64 !== 'string' || imageBase64.length > MAX_BASE64_LENGTH) {
       return NextResponse.json(
         { error: 'Image payload too large' },
         { status: 413 }
       )
     }
 
-    const response = await client.responses.create({
-      model: 'gpt-5.4',
-      input: [
-        { role: 'system', content: HOLD_DETECTION_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_image',
-              image_url: `data:image/jpeg;base64,${imageBase64}`,
-              detail: 'high',
-            },
-            {
-              type: 'input_text',
-              text: buildUserPrompt(width, height, holdColor),
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'hold_detection',
-          schema: {
-            type: 'object',
-            properties: {
-              reasoning: { type: 'string' },
-              holds: {
-                type: 'array',
-                items: HOLD_SCHEMA,
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 60_000)
+
+    let response
+    try {
+      response = await client.responses.create({
+        model: 'gpt-5.4',
+        input: [
+          { role: 'system', content: HOLD_DETECTION_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_image',
+                image_url: `data:image/jpeg;base64,${imageBase64}`,
+                detail: 'high',
               },
-              route: {
-                type: 'object',
-                properties: {
-                  grade: { type: 'string' },
-                  wallAngle: { type: 'number' },
-                  holdColor: { type: 'string' },
-                },
-                required: ['grade', 'wallAngle', 'holdColor'],
-                additionalProperties: false,
+              {
+                type: 'input_text',
+                text: buildUserPrompt(width, height, holdColor),
               },
-            },
-            required: ['reasoning', 'holds', 'route'],
-            additionalProperties: false,
+            ],
           },
-          strict: true,
+        ],
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'hold_detection',
+            schema: {
+              type: 'object',
+              properties: {
+                reasoning: { type: 'string' },
+                holds: {
+                  type: 'array',
+                  items: HOLD_SCHEMA,
+                },
+                route: {
+                  type: 'object',
+                  properties: {
+                    grade: { type: 'string' },
+                    wallAngle: { type: 'number' },
+                    holdColor: { type: 'string' },
+                  },
+                  required: ['grade', 'wallAngle', 'holdColor'],
+                  additionalProperties: false,
+                },
+              },
+              required: ['reasoning', 'holds', 'route'],
+              additionalProperties: false,
+            },
+            strict: true,
+          },
         },
-      },
-    })
+      }, { signal: controller.signal })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     let parsed: DetectionResponse
     try {

@@ -1,10 +1,11 @@
 const STORAGE_KEY = 'betafinder_image'
 
-export function setImage(base64: string): void {
+export function setImage(base64: string): boolean {
   try {
     sessionStorage.setItem(STORAGE_KEY, base64)
+    return true
   } catch {
-    // sessionStorage may be full or unavailable; silently ignore
+    return false
   }
 }
 

@@ -4,8 +4,9 @@ import { Component, useEffect, useReducer, useCallback, useState, useMemo, Suspe
 import type { ReactNode, ErrorInfo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { Loader2, RotateCw } from 'lucide-react'
+import { ArrowLeft, Loader2, RotateCw } from 'lucide-react'
 import { getImage } from '@/lib/imageStore'
+import { applyGridOverlay } from '@/lib/gridOverlay'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -121,13 +122,14 @@ function AnalyzeContent() {
   const height = parseInt(searchParams.get('h') || '0', 10)
 
   const runAnalysis = useCallback(
-    (image: string, color: string) => {
+    async (image: string, color: string) => {
       if (!width || !height || !color) return
       dispatch({ type: 'ANALYZE_START' })
+      const gridImage = await applyGridOverlay(image)
       fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: image, width, height, holdColor: color }),
+        body: JSON.stringify({ imageBase64: gridImage, width, height, holdColor: color }),
       })
         .then(async (res) => {
           if (!res.ok) throw new Error('Analysis failed')
@@ -167,7 +169,7 @@ function AnalyzeContent() {
 
   const handleAddHold = useCallback((x: number, y: number) => {
     const hold: Hold = {
-      id: `h${Date.now()}`,
+      id: crypto.randomUUID(),
       x,
       y,
       type: 'jug',
@@ -206,9 +208,18 @@ function AnalyzeContent() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       <div className="mx-auto max-w-4xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-foreground text-balance">
-            Hold Detection
-          </h1>
+          <div className="flex items-center gap-2">
+            <a
+              href="/"
+              className="inline-flex items-center justify-center size-8 rounded-md hover:bg-accent"
+              aria-label="Back to upload"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+            </a>
+            <h1 className="text-xl font-semibold text-foreground text-balance">
+              Hold Detection
+            </h1>
+          </div>
           <div className="flex items-center gap-3">
             <Select value={holdColor} onValueChange={(v) => setHoldColor(v ?? '')}>
               <SelectTrigger className="w-36">
